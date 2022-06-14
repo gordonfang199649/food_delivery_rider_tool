@@ -1,4 +1,6 @@
 import importlib
+import sys
+
 from intents.dictionaries.IntentDictionary import patterns
 
 """
@@ -14,14 +16,15 @@ from intents.dictionaries.IntentDictionary import patterns
     :return Line 訊息封裝物件
 """
 
-def dispatch(self, intent: str):
+def dispatch(intent: str):
     for pattern, action in patterns.items():
         matched = pattern.match(intent)
 
         # 若無命中任一意圖，機器人則不回應訊息
         if matched:
-            module = importlib.import_module(f'{action[0]}.{action[1]}')
-            class_ = getattr(module, action[1])()
-            return getattr(class_, action[2])(intent=intent, pattern=pattern)
+            if action[0] not in sys.modules:
+                importlib.import_module(action[0])
+
+            return getattr(sys.modules[action[0]], action[1])(intent=intent, pattern=pattern)
 
     return None
