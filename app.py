@@ -19,8 +19,6 @@ import logging as LOGGER
 
 LOGGER.getLogger(__name__)
 load_dotenv()
-# TODO 保留一個 API 定時清除快取
-# TODO 加大快取大小
 cache = LRUCache(10)
 app = Flask(__name__)
 

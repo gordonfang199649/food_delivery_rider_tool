@@ -3,9 +3,11 @@ import pickle
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+import config.Logger
+import logging as LOGGER
 
 def Create_Service(client_secret_file, api_name, api_version, *scopes):
-    print(client_secret_file, api_name, api_version, scopes, sep='-')
+    LOGGER.info(f'{client_secret_file} - {api_name} - {api_version} - {scopes}')
     CLIENT_SECRET_FILE = client_secret_file
     API_SERVICE_NAME = api_name
     API_VERSION = api_version
@@ -31,8 +33,8 @@ def Create_Service(client_secret_file, api_name, api_version, *scopes):
 
     try:
         service = build(API_SERVICE_NAME, API_VERSION, credentials=cred)
-        print(API_SERVICE_NAME, 'service created successfully')
+        LOGGER.info(f'{API_SERVICE_NAME} service created successfully')
         return service
     except Exception as e:
-        print('Unable to connect.')
+        LOGGER.error('Google 雲端硬碟 API 連線異常，請稍候重試。')
         raise e

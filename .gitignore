@@ -122,15 +122,15 @@ celerybeat.pid
 
 # Environments
 .env
-.env.test
+.env
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
-token_drive_v3.pickle
-credentials.json
+agents/token_drive_v3.pickle
+agents/credentials.json
 
 # Spyder project settings
 .spyderproject
