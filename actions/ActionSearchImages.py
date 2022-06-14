@@ -32,20 +32,20 @@ LOGGER.getLogger(__name__)
 """
 ROWS = int(getenv('ROWS'))
 shop_cache = list()
+
 """
-    列出最符合關鍵字的店家名稱
-    :param shop_name: 商家名稱
-    :return 店家名稱
+    暫存店家名稱、檔案 ID 作為快取
+    1. web server 啟動之時執行
+    2. 清除快取
+    3. 進入 Google 雲端硬碟撈取所有的資料夾
+    4. 將結果儲存到快取，以利加快後續查詢
+    5. 設置排程定點清除
 """
 
 def store_all_shop_names():
+    shop_cache.clear()
     folders = list_files(query="mimeType = 'application/vnd.google-apps.folder'", fields='files(id, name)')
-
-    for folder in folders:
-        google_file = GoogleFile()
-        google_file.file_id = folder.get('id')
-        google_file.file_name = folder.get('name')
-        shop_cache.append(google_file)
+    shop_cache.extend(map(lambda folder: GoogleFile(folder.get('id'), folder.get('name')), folders))
 
 """
     列出最符合關鍵字的店家名稱
@@ -58,23 +58,23 @@ def store_all_shop_names():
 def search_for_shop_names(intent: str, pattern: re) -> FlexSendMessage or TextSendMessage:
     # 取出訊息關鍵字
     matched = pattern.match(intent)
+    shop_name = matched.group(1)
 
-    result = list()
-    for shop in shop_cache:
-        if matched.group(1) in shop.file_name:
-            result.append({'name': shop.file_name})
+    # 從快取篩選使用者可能是想要查詢的店家名稱
+    filtered_shops = list(filter(lambda shop: shop_name in shop.file_name, shop_cache))
+    result = list(map(lambda shop: shop.file_name, filtered_shops))
 
     try:
+        # 找不到店家進入雲端硬碟搜尋
         if len(result) < 1:
-            result = list(list_most_matched_shop_names(shop_name=matched.group(1)))
+            result = list(list_most_matched_shop_names(shop_name=shop_name))
     except Exception as e:
         LOGGER.error(e)
         return TextSendMessage(text='很抱歉，服務異常，請聯絡開發人員。')
 
     if len(result) > 0:
         # 套用 Line 回覆訊息模板
-        shop_names = list(map(lambda field: field['name'], result))
-        template = shop_name_template(shop_names=shop_names)
+        template = shop_name_template(shop_names=result)
         return FlexSendMessage(alt_text='shop name', contents=template)
 
     return TextSendMessage(text='很抱歉，該店家無照片可使用，如果可以的話，請協助拍照，感謝您。')
@@ -92,12 +92,13 @@ def list_shop_images(intent: str, pattern: re) -> list or TextSendMessage:
     shop_name = matched.group(1)
     folder_id = None
 
-    for shop in shop_cache:
-        if shop_name == shop.file_name:
-            folder_id = shop.file_id
+    # 篩選欲查詢店家是否在 Cache
+    filtered_shops = filter(lambda shop: shop_name == shop.file_name, shop_cache)
+    if filtered_shops is not None:
+        folder_id = list(filtered_shops)[0].file_id
 
     try:
-        # 進入雲端硬碟搜尋店家名稱前，先看 Cache 有沒有 folder ID
+        # 進入雲端硬碟搜尋店家名稱前，先看 cache 有沒有 folder ID
         # 如果沒有再進去硬碟內搜尋
         if folder_id is None:
             result = list(list_most_matched_shop_names(shop_name=shop_name))
