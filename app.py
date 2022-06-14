@@ -54,6 +54,10 @@ def callback():
 
     return 'OK'
 
+"""
+    清除店家快取資料
+"""
+
 @app.route("/cleanShopCache", methods=['GET'])
 def clean_shop_cache():
     host_name = socket.gethostname()
